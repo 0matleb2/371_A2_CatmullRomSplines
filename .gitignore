@@ -240,3 +240,7 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+
+OpenGL-Assignment2/OpenGL-Assignment2.sln
+OpenGL-Assignment2/OpenGL-Assignment2.vcxproj
+OpenGL-Assignment2/OpenGL-Assignment2.vcxproj.filters
