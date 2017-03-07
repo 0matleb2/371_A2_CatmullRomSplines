@@ -32,6 +32,7 @@ double mX, mY;
 GLuint VAO, VBO;
 
 std::vector<glm::vec3> vertices, profile, trajectory;
+std::vector<GLuint> indices;
 
 
 
@@ -105,6 +106,162 @@ std::vector<glm::vec3> generateSplines(std::vector<glm::vec3> inputVertices) {
 
 
 
+void loadMeshData() {
+
+	std::vector<std::string> input_file_lines = FileIO::readFile();
+
+
+	std::vector<glm::vec3> surfaceVertices;
+	std::vector<GLuint> surfaceIndices;
+	int numPointsProfile, numPointsTrajectory, rotationalSpan;
+
+	// Translational sweep
+	if (input_file_lines[0] == "0") {
+		std::cout << "Translational:" << std::endl;
+
+		// Get profile curve
+
+		std::cout << "Profile:" << std::endl;
+		numPointsProfile = std::stoi(input_file_lines[1]);
+		std::vector<glm::vec3> profileCurveVertices;
+
+		for (int i = 0; i < numPointsProfile; i++) {
+
+			std::stringstream lineStream(input_file_lines[i + 2]);
+
+			float x;
+			lineStream >> x;
+			float y;
+			lineStream >> y;
+			float z;
+			lineStream >> z;
+
+			profileCurveVertices.push_back(glm::vec3(x, y, z));
+			std::cout << x << ", " << y << ", " << z << std::endl;
+		}
+
+		// Get trajectory curve
+
+		std::cout << "Trajectory:" << std::endl;
+		numPointsTrajectory = std::stoi(input_file_lines[1 + numPointsProfile + 1]);
+		std::vector<glm::vec3> trajectoryCurveVertices;
+
+		for (int i = 0; i < numPointsTrajectory; i++) {
+
+			std::stringstream lineStream(input_file_lines[2 + numPointsProfile + 1 + i]);
+
+			float x;
+			lineStream >> x;
+			float y;
+			lineStream >> y;
+			float z;
+			lineStream >> z;
+
+			trajectoryCurveVertices.push_back(glm::vec3(x, y, z));
+			std::cout << x << ", " << y << ", " << z << std::endl;
+		}
+
+		// Create vertice array
+
+		for (int i = 0, n = profileCurveVertices.size(); i < n; ++i) { // Original profile
+			surfaceVertices.push_back(profileCurveVertices[i]);
+		}
+
+		for (int i = 1; i < numPointsTrajectory; ++i) { // Translated profiles
+
+			glm::vec3 translation = trajectoryCurveVertices[i] - trajectoryCurveVertices[0];
+
+			for (int j = 0, n = profileCurveVertices.size(); j < n; ++j) {
+				glm::vec3 translatedVertex = profileCurveVertices[j] + translation;
+				surfaceVertices.push_back(translatedVertex);
+			}
+		}
+
+		std::cout << "Vector surface vertices" << std::endl;
+		for (int i = 0, n = surfaceVertices.size(); i < n; ++i) {
+			std::cout << surfaceVertices[i].x << ", " << surfaceVertices[i].y << ", " << surfaceVertices[i].z << std::endl;
+		}
+
+		// Create indice array
+		std::cout << "Surface indices:" << std::endl;
+		for (int i = numPointsProfile, n = surfaceVertices.size() - 1; i < n; ++i) {
+			if ((i + 1) % numPointsProfile != 0) {
+				std::cout << i << ", " << i - numPointsProfile << ", " << i - numPointsProfile + 1 << std::endl;
+				surfaceIndices.push_back(i);
+				surfaceIndices.push_back(i - numPointsProfile);
+				surfaceIndices.push_back(i - numPointsProfile + 1);
+
+				std::cout << i << ", " << i - numPointsProfile + 1 << ", " << i + 1 << std::endl;
+				surfaceIndices.push_back(i);
+				surfaceIndices.push_back(i - numPointsProfile + 1);
+				surfaceIndices.push_back(i + 1);
+			}
+		}
+
+	}
+
+
+
+	// Rotational sweep
+	else {
+		std::cout << "Rotational:" << std::endl;
+
+		// Get profile curve
+		std::cout << "Profile:" << std::endl;
+		rotationalSpan = std::stoi(input_file_lines[1]);
+		numPointsProfile = std::stoi(input_file_lines[2]);
+		std::vector<glm::vec3> profileCurveVertices;
+
+		for (int i = 0; i < numPointsProfile; i++) {
+
+			std::stringstream lineStream(input_file_lines[i + 3]);
+
+			float x;
+			lineStream >> x;
+			float y;
+			lineStream >> y;
+			float z;
+			lineStream >> z;
+
+			profileCurveVertices.push_back(glm::vec3(x, y, z));
+			surfaceVertices.push_back(glm::vec3(x, y, z));
+			std::cout << x << ", " << y << ", " << z << std::endl;
+		}
+
+		// Get rotated vertices
+		for (int i = 0; i < rotationalSpan; ++i) {
+			for (int j = 0, n = profileCurveVertices.size(); j < n; ++j) {
+				glm::vec3 rotatedVertex = glm::rotateZ(profileCurveVertices[j], glm::radians((float(360) / rotationalSpan)*(i + 1)));
+				surfaceVertices.push_back(rotatedVertex);
+			}
+		}
+
+		std::cout << "Surface indices:" << std::endl;
+		for (int i = numPointsProfile, n = surfaceVertices.size() - 1; i < n; ++i) {
+			if ((i + 1) % numPointsProfile != 0) {
+				//std::cout << i << ", " << i - numPointsProfile << ", " << i - numPointsProfile + 1 << std::endl;
+				surfaceIndices.push_back(i);
+				surfaceIndices.push_back(i - numPointsProfile);
+				surfaceIndices.push_back(i - numPointsProfile + 1);
+
+				//std::cout << i << ", " << i - numPointsProfile + 1 << ", " << i + 1 << std::endl;
+				surfaceIndices.push_back(i);
+				surfaceIndices.push_back(i - numPointsProfile + 1);
+				surfaceIndices.push_back(i + 1);
+			}
+		}
+
+	}
+
+
+	vertices = surfaceVertices;
+	indices = surfaceIndices;
+
+}
+
+
+
+
 
 
 
@@ -123,7 +280,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 
 			if (vertices.size() > 4) {
 				vertices = generateSplines(vertices);
-				Renderer::getInstance()->updateBuffer(vertices);
+				Renderer::getInstance()->updateVertexBuffer(vertices);
 			}
 
 			FileIO::writeRotational(vertices);
@@ -138,7 +295,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 				vertices = generateSplines(vertices);
 				profile = vertices;
 
-				Renderer::getInstance()->updateBuffer(vertices);
+				Renderer::getInstance()->updateVertexBuffer(vertices);
 
 				currentState = VIEW_PROFILE;
 			}
@@ -151,7 +308,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 				vertices = generateSplines(vertices);
 				trajectory = vertices;
 
-				Renderer::getInstance()->updateBuffer(vertices);
+				Renderer::getInstance()->updateVertexBuffer(vertices);
 
 				FileIO::writeTranslational(profile, trajectory);
 
@@ -163,9 +320,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 		else if (currentState == VIEW_PROFILE && sweepType == ROTATIONAL) {
 
 			vertices.clear();
-			Renderer::getInstance()->updateBuffer(vertices);
+			Renderer::getInstance()->updateVertexBuffer(vertices);
 
-			// Load mesh to Renderer
+			loadMeshData();
+
+			Renderer::getInstance()->updateVertexBuffer(vertices);
+			Renderer::getInstance()->updateElementBuffer(indices);
 
 			currentState = VIEW_MESH;
 		}
@@ -173,7 +333,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 		else if (currentState == VIEW_PROFILE && sweepType == TRANSLATIONAL) {
 
 			vertices.clear();
-			Renderer::getInstance()->updateBuffer(vertices);
+			Renderer::getInstance()->updateVertexBuffer(vertices);
 
 			currentState = INPUT_TRAJECTORY;
 
@@ -181,10 +341,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 
 		else if (currentState == VIEW_TRAJECTORY && sweepType == TRANSLATIONAL) {
 			
-			vertices.clear();
-			Renderer::getInstance()->updateBuffer(vertices);
+			loadMeshData();
 
-			// Load mesh to Renderer
+			Renderer::getInstance()->updateVertexBuffer(vertices);
+			Renderer::getInstance()->updateElementBuffer(indices);
 			
 			currentState = VIEW_MESH;
 		}
@@ -222,7 +382,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 		std::cout << "Vertex: (" << nX << ", " << nY << ")" << std::endl;
 
 		vertices.push_back(glm::vec3(nX, nY, 0.0f));
-		Renderer::getInstance()->updateBuffer(vertices);
+		Renderer::getInstance()->updateVertexBuffer(vertices);
 	}
 }
 
@@ -325,7 +485,11 @@ int main() {
 
 		glfwPollEvents();
 
-		Renderer::getInstance()->render();
+		if (currentState == VIEW_MESH)
+			Renderer::getInstance()->renderElements();
+		else
+			Renderer::getInstance()->renderArrays();
+
 
 		/*
 		glm::mat4 model;

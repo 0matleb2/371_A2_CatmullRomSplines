@@ -9,4 +9,5 @@ public:
 
 	static void writeTranslational(std::vector<glm::vec3> profile, std::vector<glm::vec3> trajectory);
 
+	static std::vector<std::string> readFile();
 };

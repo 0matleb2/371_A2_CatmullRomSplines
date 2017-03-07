@@ -1,4 +1,5 @@
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <iostream>
 
@@ -48,5 +49,34 @@ void FileIO::writeTranslational(std::vector<glm::vec3> profile, std::vector<glm:
 	else {
 		std::cout << "Error writing to file" << std::endl;
 	}
+}
+
+std::vector<std::string> FileIO::readFile() {
+
+
+	// Read input file
+	std::string input_file_path = "mesh_data.txt";
+	std::vector<std::string> input_file_lines;
+	std::ifstream input_file_stream(input_file_path, std::ios::in);
+
+	if (input_file_stream.is_open()) {
+		std::string line = "";
+		while (getline(input_file_stream, line))
+			input_file_lines.push_back(line);
+		input_file_stream.close();
+	}
+	else {
+		printf("Impossible to open %s. Are you in the right directory ?\n", input_file_path.c_str());
+		getchar();
+		exit(-1);
+	}
+
+	std::cout << "Input file contents:" << std::endl;
+	for (int i = 0, n = input_file_lines.size(); i < n; ++i) {
+		std::cout << input_file_lines[i] << std::endl;
+	}
+
+	return input_file_lines;
+
 }
 

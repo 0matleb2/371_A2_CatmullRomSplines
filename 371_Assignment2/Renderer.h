@@ -14,9 +14,13 @@ public:
 
 	static Renderer* getInstance();
 
-	void render();
+	void renderArrays();
 
-	void updateBuffer(std::vector<glm::vec3> vertices);
+	void renderElements();
+
+	void updateVertexBuffer(std::vector<glm::vec3> vertices);
+
+	void updateElementBuffer(std::vector<GLuint> indices);
 
 	void setRenderMode(RenderMode mode);
 
@@ -31,9 +35,9 @@ private:
 	Shader* shader;
 
 	std::vector<glm::vec3> vertices;
+	std::vector<GLuint> indices;
 
-	GLuint VAO;
-	GLuint VBO;
+	GLuint VAO, VBO, EBO;
 
 	RenderMode renderMode;
 
