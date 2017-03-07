@@ -16,7 +16,7 @@ public:
 
 	void renderArrays();
 
-	void renderElements();
+	void renderElements(glm::mat4 view, glm::mat4 projection);
 
 	void updateVertexBuffer(std::vector<glm::vec3> vertices);
 

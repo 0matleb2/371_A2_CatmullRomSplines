@@ -150,13 +150,16 @@
     <ClCompile Include="Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="FileIO.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Shader.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="E:\res\shaders\fragment.shader" />
-    <None Include="E:\res\shaders\vertex.shader" />
+    <None Include="res\shaders\fragment.shader" />
+    <None Include="res\shaders\fragment2.shader" />
+    <None Include="res\shaders\vertex.shader" />
+    <None Include="res\shaders\vertex2.shader" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

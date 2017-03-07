@@ -41,12 +41,21 @@
     <ClInclude Include="FileIO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="E:\res\shaders\fragment.shader">
+    <None Include="res\shaders\fragment.shader">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="E:\res\shaders\vertex.shader">
+    <None Include="res\shaders\vertex.shader">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="res\shaders\fragment2.shader">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="res\shaders\vertex2.shader">
       <Filter>Resource Files\shaders</Filter>
     </None>
   </ItemGroup>

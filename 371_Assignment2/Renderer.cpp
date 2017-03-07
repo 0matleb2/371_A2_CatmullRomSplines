@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "deps\glm\gtc\type_ptr.hpp"
 
 Renderer *Renderer::instance = 0;
 
@@ -12,7 +13,7 @@ Renderer * Renderer::getInstance() {
 
 void Renderer::renderArrays() {
 
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glBindVertexArray(VAO);
@@ -28,10 +29,26 @@ void Renderer::renderArrays() {
 
 }
 
-void Renderer::renderElements() {
+void Renderer::renderElements(glm::mat4 iView, glm::mat4 iProjection) {
 
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	shader = new Shader("res/shaders/vertex2.shader", "res/shaders/fragment2.shader");
+	shader->use();
+
+	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glm::mat4 model = glm::scale(glm::mat4(1), glm::vec3(5, 5, 5));
+	glm::mat4 view = iView;
+	glm::mat4 projection = iProjection;
+
+	//broadcast the uniform values to the shaders
+	GLuint modelLoc = glGetUniformLocation(shader->program, "model");
+	GLuint viewLoc = glGetUniformLocation(shader->program, "view");
+	GLuint projectionLoc = glGetUniformLocation(shader->program, "projection");
+
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	glBindVertexArray(VAO);
 

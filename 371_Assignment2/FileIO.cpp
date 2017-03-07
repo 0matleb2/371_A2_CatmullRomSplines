@@ -71,11 +71,6 @@ std::vector<std::string> FileIO::readFile() {
 		exit(-1);
 	}
 
-	std::cout << "Input file contents:" << std::endl;
-	for (int i = 0, n = input_file_lines.size(); i < n; ++i) {
-		std::cout << input_file_lines[i] << std::endl;
-	}
-
 	return input_file_lines;
 
 }

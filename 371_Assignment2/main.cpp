@@ -15,6 +15,9 @@
 
 #include "Renderer.h"
 #include "FileIO.h"
+#include "Camera.h"
+
+GLFWwindow* window;
 
 enum GameState {INPUT_PROFILE, INPUT_TRAJECTORY, VIEW_PROFILE, VIEW_TRAJECTORY, VIEW_MESH};
 enum SweepType {TRANSLATIONAL, ROTATIONAL};
@@ -28,13 +31,16 @@ int SCREEN_WIDTH, SCREEN_HEIGHT;
 float deltaTime, lastFrame;
 
 double mX, mY;
+GLfloat lastX = WIDTH / 2.0f;
+GLfloat lastY = HEIGHT / 2.0f;
+bool firstMouse = true;
 
-GLuint VAO, VBO;
+bool keys[1024];
 
 std::vector<glm::vec3> vertices, profile, trajectory;
 std::vector<GLuint> indices;
 
-
+Camera* camera = new Camera();
 
 glm::vec3 catmullRom(float u, glm::mat4x3 control, float tension = 0.5) {
 
@@ -117,11 +123,6 @@ void loadMeshData() {
 
 	// Translational sweep
 	if (input_file_lines[0] == "0") {
-		std::cout << "Translational:" << std::endl;
-
-		// Get profile curve
-
-		std::cout << "Profile:" << std::endl;
 		numPointsProfile = std::stoi(input_file_lines[1]);
 		std::vector<glm::vec3> profileCurveVertices;
 
@@ -137,12 +138,8 @@ void loadMeshData() {
 			lineStream >> z;
 
 			profileCurveVertices.push_back(glm::vec3(x, y, z));
-			std::cout << x << ", " << y << ", " << z << std::endl;
 		}
 
-		// Get trajectory curve
-
-		std::cout << "Trajectory:" << std::endl;
 		numPointsTrajectory = std::stoi(input_file_lines[1 + numPointsProfile + 1]);
 		std::vector<glm::vec3> trajectoryCurveVertices;
 
@@ -158,7 +155,6 @@ void loadMeshData() {
 			lineStream >> z;
 
 			trajectoryCurveVertices.push_back(glm::vec3(x, y, z));
-			std::cout << x << ", " << y << ", " << z << std::endl;
 		}
 
 		// Create vertice array
@@ -177,21 +173,15 @@ void loadMeshData() {
 			}
 		}
 
-		std::cout << "Vector surface vertices" << std::endl;
-		for (int i = 0, n = surfaceVertices.size(); i < n; ++i) {
-			std::cout << surfaceVertices[i].x << ", " << surfaceVertices[i].y << ", " << surfaceVertices[i].z << std::endl;
-		}
 
 		// Create indice array
 		std::cout << "Surface indices:" << std::endl;
 		for (int i = numPointsProfile, n = surfaceVertices.size() - 1; i < n; ++i) {
 			if ((i + 1) % numPointsProfile != 0) {
-				std::cout << i << ", " << i - numPointsProfile << ", " << i - numPointsProfile + 1 << std::endl;
 				surfaceIndices.push_back(i);
 				surfaceIndices.push_back(i - numPointsProfile);
 				surfaceIndices.push_back(i - numPointsProfile + 1);
 
-				std::cout << i << ", " << i - numPointsProfile + 1 << ", " << i + 1 << std::endl;
 				surfaceIndices.push_back(i);
 				surfaceIndices.push_back(i - numPointsProfile + 1);
 				surfaceIndices.push_back(i + 1);
@@ -204,10 +194,6 @@ void loadMeshData() {
 
 	// Rotational sweep
 	else {
-		std::cout << "Rotational:" << std::endl;
-
-		// Get profile curve
-		std::cout << "Profile:" << std::endl;
 		rotationalSpan = std::stoi(input_file_lines[1]);
 		numPointsProfile = std::stoi(input_file_lines[2]);
 		std::vector<glm::vec3> profileCurveVertices;
@@ -225,7 +211,6 @@ void loadMeshData() {
 
 			profileCurveVertices.push_back(glm::vec3(x, y, z));
 			surfaceVertices.push_back(glm::vec3(x, y, z));
-			std::cout << x << ", " << y << ", " << z << std::endl;
 		}
 
 		// Get rotated vertices
@@ -236,15 +221,12 @@ void loadMeshData() {
 			}
 		}
 
-		std::cout << "Surface indices:" << std::endl;
 		for (int i = numPointsProfile, n = surfaceVertices.size() - 1; i < n; ++i) {
 			if ((i + 1) % numPointsProfile != 0) {
-				//std::cout << i << ", " << i - numPointsProfile << ", " << i - numPointsProfile + 1 << std::endl;
 				surfaceIndices.push_back(i);
 				surfaceIndices.push_back(i - numPointsProfile);
 				surfaceIndices.push_back(i - numPointsProfile + 1);
 
-				//std::cout << i << ", " << i - numPointsProfile + 1 << ", " << i + 1 << std::endl;
 				surfaceIndices.push_back(i);
 				surfaceIndices.push_back(i - numPointsProfile + 1);
 				surfaceIndices.push_back(i + 1);
@@ -260,7 +242,48 @@ void loadMeshData() {
 }
 
 
+void doMovement() {
 
+	if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP]) {
+		camera->processKeyboard(FORWARD, deltaTime);
+	}
+
+	if (keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN]) {
+		camera->processKeyboard(BACKWARD, deltaTime);
+	}
+
+	if (keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT]) {
+		camera->processKeyboard(LEFT, deltaTime);
+	}
+
+	if (keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT]) {
+		camera->processKeyboard(RIGHT, deltaTime);
+	}
+
+	if (keys[GLFW_KEY_SPACE]) {
+		camera->processKeyboard(UP, deltaTime);
+	}
+
+	if (keys[GLFW_KEY_LEFT_CONTROL]) {
+		camera->processKeyboard(DOWN, deltaTime);
+	}
+	
+	if (keys[GLFW_KEY_Q]) {
+	camera->processKeyboard(ROLL_LEFT, deltaTime);
+	}
+
+	if (keys[GLFW_KEY_E]) {
+	camera->processKeyboard(ROLL_RIGHT, deltaTime);
+	}
+
+	if (keys[GLFW_KEY_LEFT_SHIFT]) {
+		camera->processKeyboard(SPRINT, deltaTime);
+	}
+
+	if (!keys[GLFW_KEY_LEFT_SHIFT]) {
+		camera->processKeyboard(WALK, deltaTime);
+	}
+}
 
 
 
@@ -273,7 +296,14 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-
+	if (key >= 0 && key < 1024) {
+		if (action == GLFW_PRESS) {
+			keys[key] = true;
+		}
+		else if (action == GLFW_RELEASE) {
+			keys[key] = false;
+		}
+	}
 
 	if (key == GLFW_KEY_ENTER && action == GLFW_PRESS) {
 		if (currentState == INPUT_PROFILE && sweepType == ROTATIONAL) {
@@ -327,6 +357,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 			Renderer::getInstance()->updateVertexBuffer(vertices);
 			Renderer::getInstance()->updateElementBuffer(indices);
 
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 			currentState = VIEW_MESH;
 		}
 
@@ -346,6 +378,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 			Renderer::getInstance()->updateVertexBuffer(vertices);
 			Renderer::getInstance()->updateElementBuffer(indices);
 			
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 			currentState = VIEW_MESH;
 		}
 	}
@@ -371,15 +405,32 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 void cursorPosCallback(GLFWwindow* window, double xPos, double yPos) {
 	mX = xPos;
 	mY = yPos;
+
+	if (firstMouse) {
+		lastX = xPos;
+		lastY = yPos;
+		firstMouse = false;
+	}
+
+	GLfloat xOffset = xPos - lastX;
+	GLfloat yOffset = lastY - yPos;
+
+	lastX = xPos;
+	lastY = yPos;
+
+	camera->processMouseMovement(xOffset, yOffset);
+}
+
+
+void scrollCallback(GLFWwindow* window, double xOffset, double yOffset) {
+	std::cout << xOffset << " " << yOffset << std::endl;
+	camera->processMouseScroll(yOffset);
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 		GLfloat nX = (2 * mX) / SCREEN_WIDTH - 1;
 		GLfloat nY = -((2 * mY) / SCREEN_HEIGHT - 1);
-
-		std::cout << "Mouse: (" << mX << ", " << mY << ")" << std::endl;
-		std::cout << "Vertex: (" << nX << ", " << nY << ")" << std::endl;
 
 		vertices.push_back(glm::vec3(nX, nY, 0.0f));
 		Renderer::getInstance()->updateVertexBuffer(vertices);
@@ -427,7 +478,7 @@ GLFWwindow* openWindow() {
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 	glfwSetCursorPosCallback(window, cursorPosCallback);
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
-
+	glfwSetScrollCallback(window, scrollCallback);
 
 	// Initialize GLEW and OpenGL settings
 	glewExperimental = GL_TRUE;
@@ -445,7 +496,7 @@ GLFWwindow* openWindow() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glPointSize(5);
+	glPointSize(3);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	return window;
@@ -469,47 +520,28 @@ int main() {
 		sweepType = ROTATIONAL;
 
 	
-	GLFWwindow* window = openWindow();
+	window = openWindow();
 
 
 	// Game loop
 	while (!glfwWindowShouldClose(window)) {
 
-		std::cout << currentState << " " << sweepType << std::endl;
 
-		/*
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
-		*/
+
 
 		glfwPollEvents();
-
 		if (currentState == VIEW_MESH)
-			Renderer::getInstance()->renderElements();
+			doMovement();
+
+		if (currentState == VIEW_MESH) {
+			glm::mat4 projection = glm::perspective(glm::radians(camera->getSmoothedZoom()), (GLfloat)SCREEN_WIDTH / SCREEN_HEIGHT, 0.1f, 1000.0f);
+			Renderer::getInstance()->renderElements(camera->getViewMatrix(), projection);
+		}
 		else
 			Renderer::getInstance()->renderArrays();
-
-
-		/*
-		glm::mat4 model;
-		model = glm::mat4(1.0f);
-
-		glm::mat4 view;
-		view = glm::lookAt(glm::vec3(0.0f, 0.0f, -3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-		glm::mat4 projection;
-		projection = glm::ortho(10.0f, 10.0f, 10.0f, 10.0f);
-
-		//broadcast the uniform values to the shaders
-		GLuint modelLoc = glGetUniformLocation(myShader.program, "model");
-		GLuint viewLoc = glGetUniformLocation(myShader.program, "view");
-		GLuint projectionLoc = glGetUniformLocation(myShader.program, "projection");
-
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		*/
 
 
 		glfwSwapBuffers(window);
