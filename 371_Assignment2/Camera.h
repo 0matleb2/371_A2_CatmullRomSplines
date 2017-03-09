@@ -19,10 +19,11 @@ enum CameraMovement {
 		ROLL_LEFT,
 		ROLL_RIGHT,
 		SPRINT,
-		WALK
+		WALK,
+		CRAWL
 };
 
-const GLfloat SPEED = 7.0f;
+const GLfloat SPEED = 140.0f;
 const GLfloat SENSITIVITY = 0.25f;
 const GLfloat ROLL_SPEED = 1.5f;
 const GLfloat ZOOM = 45.0f;
@@ -32,7 +33,7 @@ class Camera {
 
 public:
 
-	Camera(glm::vec4 position = glm::vec4(0.0f, 15.0f, 0.0f, 0.0f), glm::vec4 up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)) 
+	Camera(glm::vec4 position = glm::vec4(0.0f, 150.0f, 0.0f, 0.0f), glm::vec4 up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)) 
 		: rotation(glm::mat4(1.0)), front(glm::vec4(0.0f, -1.0f, 0.0f, 0.0f)), movementSpeed(SPEED), mouseSensitivity(SENSITIVITY), zoom(ZOOM) {
 
 		this->position = position;
@@ -95,6 +96,10 @@ public:
 
 		if (WALK == command) {
 			this->movementSpeed = SPEED;
+		}
+
+		if (CRAWL == command) {
+			this->movementSpeed = SPEED / 2.5;
 		}
 
 	}
@@ -168,8 +173,6 @@ private:
 
 	void updateCameraVectors() {
 		
-		std::cout << position.x << " " << position.y << " " << position.z << std::endl;
-		std::cout << front.x << " " << front.y << " " << front.z << std::endl;
 		
 		this->front = rotation * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
 		this->right = glm::vec4(glm::normalize(glm::cross(glm::vec3(this->front), glm::vec3(this->worldUp))), 0.0f);

@@ -12,6 +12,7 @@
 #include "deps/glm/gtc/matrix_transform.hpp"
 #include "deps/glm/gtc/type_ptr.hpp"
 #include "deps/glm/gtx/rotate_vector.hpp"
+#include "deps/glm/gtx/vector_angle.hpp"
 
 #include "Renderer.h"
 #include "FileIO.h"
@@ -21,11 +22,13 @@ GLFWwindow* window;
 
 enum GameState {INPUT_PROFILE, INPUT_TRAJECTORY, VIEW_PROFILE, VIEW_TRAJECTORY, VIEW_MESH};
 enum SweepType {TRANSLATIONAL, ROTATIONAL};
+enum SubdivideMethod {DISTANCE, CURVATURE};
 
 GameState currentState;
 SweepType sweepType;
+SubdivideMethod subdivideMethod = DISTANCE;
 
-const int WIDTH = 800, HEIGHT = 800;
+const int WIDTH = 1920, HEIGHT = 1080;
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 float deltaTime, lastFrame;
@@ -77,6 +80,31 @@ void subdivideSpline(float u0, float u1, float minU, glm::mat4x3 control, std::v
 }
 
 
+
+void subdivideSpline(float u0, float u1, glm::vec3 t0, glm::vec3 t1, float minU, glm::mat4x3 control, std::vector<glm::vec3>* sV) {
+
+
+	float uMid = (u0 + u1) / 2;
+
+	glm::vec3 v0 = catmullRom(u0, control);
+	glm::vec3 v1 = catmullRom(u1, control);
+
+
+	float angle = abs(glm::degrees(glm::angle(glm::normalize(t0), glm::normalize(t1))));
+
+	glm::vec3 tMid = glm::normalize(v1 - v0);
+
+	if (angle > 1.00f && (glm::length(v1-v0) > 0.005)) {
+			subdivideSpline(u0, uMid, t0, tMid, minU, control, sV);
+			subdivideSpline(uMid, u1, tMid, t1, minU, control, sV);
+	}
+	else {
+		sV->push_back(v1);
+	}
+
+}
+
+
 std::vector<glm::vec3> generateSplines(std::vector<glm::vec3> inputVertices) {
 
 	std::vector<glm::vec3> splineVertices;
@@ -88,7 +116,6 @@ std::vector<glm::vec3> generateSplines(std::vector<glm::vec3> inputVertices) {
 
 		// Generate a spline for each 4 control points
 		for (int i = 0, n = vertices.size(); i < (n - 3); i++) {
-
 			glm::mat4x3 control = glm::mat4x3(
 				vertices[i].x,			vertices[i].y,			vertices[i].z,
 				vertices[i + 1].x,		vertices[i + 1].y,		vertices[i + 1].z,
@@ -99,8 +126,18 @@ std::vector<glm::vec3> generateSplines(std::vector<glm::vec3> inputVertices) {
 
 			
 			// Pushes middle vertices
-			subdivideSpline(0.0f, 1.0f, 0.1f, control, &splineVertices);
+			if (subdivideMethod = DISTANCE) {
 
+				subdivideSpline(0.0f, 1.0f, 0.1f, control, &splineVertices);
+
+			}
+			else if (subdivideMethod = CURVATURE) {
+
+				glm::vec3 t0 = glm::normalize(vertices[i+2] - vertices[i]);
+				glm::vec3 t1 = glm::normalize(vertices[i+3] - vertices[i+1]);
+
+				subdivideSpline(0.0f, 1.0f, t0, t1, 0.1f, control, &splineVertices);
+			}
 
 		}
 	}
@@ -175,7 +212,6 @@ void loadMeshData() {
 
 
 		// Create indice array
-		std::cout << "Surface indices:" << std::endl;
 		for (int i = numPointsProfile, n = surfaceVertices.size() - 1; i < n; ++i) {
 			if ((i + 1) % numPointsProfile != 0) {
 				surfaceIndices.push_back(i);
@@ -280,9 +316,14 @@ void doMovement() {
 		camera->processKeyboard(SPRINT, deltaTime);
 	}
 
-	if (!keys[GLFW_KEY_LEFT_SHIFT]) {
+	if (keys[GLFW_KEY_LEFT_ALT]) {
+		camera->processKeyboard(CRAWL, deltaTime);
+	}
+
+	if (!keys[GLFW_KEY_LEFT_ALT] && !keys[GLFW_KEY_LEFT_SHIFT]) {
 		camera->processKeyboard(WALK, deltaTime);
 	}
+
 }
 
 
@@ -385,17 +426,23 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	}
 
 
+	if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+		subdivideMethod = (SubdivideMethod)(1 - subdivideMethod);
+		std::cout << (subdivideMethod ? "Subdivision method set to CURVATURE" : "Subdivision method set to DISTANCE") << std::endl;
+	}
+
 
 
 	if (key == GLFW_KEY_L && action == GLFW_PRESS) {
 		Renderer::getInstance()->setRenderMode(Renderer::LINES);
 	}
 
-
-
-
 	if (key == GLFW_KEY_P && action == GLFW_PRESS) {
 		Renderer::getInstance()->setRenderMode(Renderer::POINTS);
+	}
+
+	if (key == GLFW_KEY_F && action == GLFW_PRESS) {
+		Renderer::getInstance()->setRenderMode(Renderer::FILL);
 	}
 }
 
@@ -537,7 +584,7 @@ int main() {
 			doMovement();
 
 		if (currentState == VIEW_MESH) {
-			glm::mat4 projection = glm::perspective(glm::radians(camera->getSmoothedZoom()), (GLfloat)SCREEN_WIDTH / SCREEN_HEIGHT, 0.1f, 1000.0f);
+			glm::mat4 projection = glm::perspective(glm::radians(camera->getSmoothedZoom()), (GLfloat)SCREEN_WIDTH / SCREEN_HEIGHT, 0.1f, 10000.0f);
 			Renderer::getInstance()->renderElements(camera->getViewMatrix(), projection);
 		}
 		else

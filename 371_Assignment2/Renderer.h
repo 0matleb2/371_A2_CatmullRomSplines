@@ -10,7 +10,7 @@ class Renderer {
 
 public:
 
-	enum RenderMode { POINTS, LINES };
+	enum RenderMode { POINTS, LINES, FILL };
 
 	static Renderer* getInstance();
 
