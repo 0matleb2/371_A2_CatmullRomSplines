@@ -575,6 +575,7 @@ int main() {
 
 		char c;
 		do {
+			system("cls");
 			std::cout << "Do you want to perform a translational (T) or rotational (R) sweep?" << std::endl;
 			std::cin >> c;
 		} while (c != 't' && c != 'T' && c != 'r' && c != 'R');
