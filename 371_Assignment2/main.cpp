@@ -33,6 +33,8 @@ int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 float deltaTime, lastFrame;
 
+bool reset = false;
+
 double mX, mY;
 GLfloat lastX = WIDTH / 2.0f;
 GLfloat lastY = HEIGHT / 2.0f;
@@ -126,12 +128,12 @@ std::vector<glm::vec3> generateSplines(std::vector<glm::vec3> inputVertices) {
 
 			
 			// Pushes middle vertices
-			if (subdivideMethod = DISTANCE) {
+			if (subdivideMethod == DISTANCE) {
 
 				subdivideSpline(0.0f, 1.0f, 0.1f, control, &splineVertices);
 
 			}
-			else if (subdivideMethod = CURVATURE) {
+			else if (subdivideMethod == CURVATURE) {
 
 				glm::vec3 t0 = glm::normalize(vertices[i+2] - vertices[i]);
 				glm::vec3 t1 = glm::normalize(vertices[i+3] - vertices[i+1]);
@@ -334,8 +336,9 @@ void doMovement() {
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode) {
 
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
 
 	if (key >= 0 && key < 1024) {
 		if (action == GLFW_PRESS) {
@@ -344,6 +347,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 		else if (action == GLFW_RELEASE) {
 			keys[key] = false;
 		}
+	}
+
+	if (key == GLFW_KEY_BACKSPACE && action == GLFW_PRESS) {
+		vertices.clear();
+		reset = true;
+		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
 
 	if (key == GLFW_KEY_ENTER && action == GLFW_PRESS) {
@@ -408,6 +417,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 			vertices.clear();
 			Renderer::getInstance()->updateVertexBuffer(vertices);
 
+			system("CLS");
+			std::cout << (subdivideMethod ? "Subdivision method is set to CURVATURE" : "Subdivision method is set to DISTANCE") << std::endl;
+
 			currentState = INPUT_TRAJECTORY;
 
 		}
@@ -426,9 +438,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	}
 
 
-	if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_TAB && action == GLFW_PRESS && currentState != VIEW_MESH && currentState != VIEW_PROFILE && currentState != VIEW_TRAJECTORY) {
 		subdivideMethod = (SubdivideMethod)(1 - subdivideMethod);
-		std::cout << (subdivideMethod ? "Subdivision method set to CURVATURE" : "Subdivision method set to DISTANCE") << std::endl;
+
+		system("CLS");
+		std::cout << (subdivideMethod ? "Subdivision method is set to CURVATURE" : "Subdivision method is set to DISTANCE") << std::endl;
 	}
 
 
@@ -470,7 +484,6 @@ void cursorPosCallback(GLFWwindow* window, double xPos, double yPos) {
 
 
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset) {
-	std::cout << xOffset << " " << yOffset << std::endl;
 	camera->processMouseScroll(yOffset);
 }
 
@@ -554,51 +567,62 @@ GLFWwindow* openWindow() {
 
 int main() {
 
-
-	char c;
 	do {
-		std::cout << "Translational (T) or rotational (R) sweep?" << std::endl;
-		std::cin >> c;
-	} while (c != 't' && c != 'T' && c != 'r' && c != 'R');
+		reset = false;
 
-	if ( c == 't' || c == 'T')
-		sweepType = TRANSLATIONAL;
-	else if (c == 'r' || c == 'R')
-		sweepType = ROTATIONAL;
+		currentState = INPUT_PROFILE;
+		subdivideMethod = DISTANCE;
 
-	
-	window = openWindow();
+		char c;
+		do {
+			std::cout << "Do you want to perform a translational (T) or rotational (R) sweep?" << std::endl;
+			std::cin >> c;
+		} while (c != 't' && c != 'T' && c != 'r' && c != 'R');
+
+		if (c == 't' || c == 'T')
+			sweepType = TRANSLATIONAL;
+		else if (c == 'r' || c == 'R')
+			sweepType = ROTATIONAL;
+
+		system("CLS");
+
+		window = openWindow();
+
+		std::cout << (subdivideMethod ? "Subdivision method is set to CURVATURE" : "Subdivision method is set to DISTANCE") << std::endl;
+
+		// Game loop
+		while (!glfwWindowShouldClose(window)) {
 
 
-	// Game loop
-	while (!glfwWindowShouldClose(window)) {
+			GLfloat currentFrame = glfwGetTime();
+			deltaTime = currentFrame - lastFrame;
+			lastFrame = currentFrame;
 
 
-		GLfloat currentFrame = glfwGetTime();
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
+			glfwPollEvents();
+			if (currentState == VIEW_MESH)
+				doMovement();
+
+			if (currentState == VIEW_MESH) {
+				glm::mat4 projection = glm::perspective(glm::radians(camera->getSmoothedZoom()), (GLfloat)SCREEN_WIDTH / SCREEN_HEIGHT, 0.1f, 10000.0f);
+				Renderer::getInstance()->renderElements(camera->getViewMatrix(), projection);
+			}
+			else
+				Renderer::getInstance()->renderArrays();
 
 
-		glfwPollEvents();
-		if (currentState == VIEW_MESH)
-			doMovement();
-
-		if (currentState == VIEW_MESH) {
-			glm::mat4 projection = glm::perspective(glm::radians(camera->getSmoothedZoom()), (GLfloat)SCREEN_WIDTH / SCREEN_HEIGHT, 0.1f, 10000.0f);
-			Renderer::getInstance()->renderElements(camera->getViewMatrix(), projection);
+			glfwSwapBuffers(window);
 		}
-		else
-			Renderer::getInstance()->renderArrays();
+
+		glfwDestroyWindow(window);
+		Renderer::getInstance()->terminate();
+		glfwTerminate();
+
+	} while (reset);
 
 
-		glfwSwapBuffers(window);
-	}
 
 
-
-
-	Renderer::getInstance()->terminate();
-	glfwTerminate();
 
 	return 0;
 
