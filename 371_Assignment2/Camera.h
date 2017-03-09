@@ -24,8 +24,8 @@ enum CameraMovement {
 };
 
 const GLfloat SPEED = 140.0f;
-const GLfloat SENSITIVITY = 0.25f;
-const GLfloat ROLL_SPEED = 1.5f;
+const GLfloat SENSITIVITY = 0.0025f;
+const GLfloat ROLL_SPEED = 0.025f;
 const GLfloat ZOOM = 45.0f;
 
 class Camera {
@@ -33,24 +33,19 @@ class Camera {
 
 public:
 
-	Camera(glm::vec4 position = glm::vec4(0.0f, 150.0f, 0.0f, 0.0f), glm::vec4 up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)) 
-		: rotation(glm::mat4(1.0)), front(glm::vec4(0.0f, -1.0f, 0.0f, 0.0f)), movementSpeed(SPEED), mouseSensitivity(SENSITIVITY), zoom(ZOOM) {
+	Camera(glm::vec4 position = glm::vec4(0.0f, 0.0f, 400.0f, 0.0f), glm::quat cameraQuat = glm::quat(glm::vec3(0.0f, 0.0f, 0.0f)))
+		: front(glm::vec3(0.0f, -1.0f, 0.0f)), movementSpeed(SPEED), mouseSensitivity(SENSITIVITY), zoom(ZOOM) {
 
 		this->position = position;
-		this->worldUp = up;
-		this->updateCameraVectors();
-	}
-
-	Camera(GLfloat posX, GLfloat posY, GLfloat posZ, GLfloat upX, GLfloat upY, GLfloat upZ) 
-		: rotation(glm::mat4(1.0)), front(glm::vec4(0.0f, 0.0f, -1.0f, 0.0f)), movementSpeed(SPEED), mouseSensitivity(SENSITIVITY), zoom(ZOOM) {
-
-		this->position = glm::vec4(posX, posY, posZ, 1.0f);
-		this->worldUp = glm::vec4(upX, upY, upZ, 0.0f);
-		this->updateCameraVectors();
+		this->cameraQuat = cameraQuat;
+		this->updateView();
 	}
 
 	glm::mat4 getViewMatrix() {
-		return glm::lookAt(glm::vec3(this->position), glm::vec3(this->position + this->front), glm::vec3(this->up));
+
+		return viewMatrix;
+
+		//return glm::lookAt(glm::vec3(this->position), glm::vec3(this->position + this->front), glm::vec3(this->up));
 	}
 
 	void processKeyboard(CameraMovement command, GLfloat deltaTime) {
@@ -65,29 +60,29 @@ public:
 		}
 
 		if (LEFT == command) {
-			this->position -= this->right * velocity;
-		}
-
-		if (RIGHT == command) {
 			this->position += this->right * velocity;
 		}
 
-		if (UP == command) {
-			this->position += this->up * velocity;
+		if (RIGHT == command) {
+			this->position -= this->right * velocity;
 		}
 
-		if (DOWN == command) {
+		if (UP == command) {
 			this->position -= this->up * velocity;
 		}
 
+		if (DOWN == command) {
+			this->position += this->up * velocity;
+		}
+
 		if (ROLL_LEFT == command) {
-			this->worldUp = glm::rotate(glm::mat4(1), -glm::radians(ROLL_SPEED), glm::vec3(this->front)) * this->worldUp;
-			updateCameraVectors();
+			keyRoll = -ROLL_SPEED;
+			this->updateView();
 		}
 
 		if (ROLL_RIGHT == command) {
-			this->worldUp = glm::rotate(glm::mat4(1), glm::radians(ROLL_SPEED), glm::vec3(this->front)) * this->worldUp;
-			updateCameraVectors();
+			keyRoll = +ROLL_SPEED;
+			this->updateView();
 		}
 
 		if (SPRINT == command) {
@@ -102,17 +97,16 @@ public:
 			this->movementSpeed = SPEED / 2.5;
 		}
 
+		updateView();
 	}
 
 	void processMouseMovement(GLfloat xOffset, GLfloat yOffset) {
 
-		xOffset *= this->mouseSensitivity;
-		this->rotation = glm::rotate(glm::mat4(1), -glm::radians(xOffset), glm::vec3(this->up)) * this->rotation;
-		this->updateCameraVectors();
+		keyYaw = xOffset * this->mouseSensitivity;
+		keyPitch = -yOffset * this->mouseSensitivity;
 
-		yOffset *= this->mouseSensitivity;
-		this->rotation = glm::rotate(glm::mat4(1), glm::radians(yOffset), glm::vec3(this->right)) * this->rotation;
-		this->updateCameraVectors();
+		this->updateView();
+
 	}
 
 	void processMouseScroll(GLfloat yOffset) {
@@ -150,7 +144,7 @@ public:
 			smoothZoom++;
 		}
 
-		this->mouseSensitivity = 0.25 * (this->zoom / 45);
+		this->mouseSensitivity = SENSITIVITY * (this->zoom / 45);
 
 		return this->zoom;
 	}
@@ -158,25 +152,46 @@ public:
 
 private:
 
-	glm::vec4 position;
-	glm::vec4 front;
-	glm::vec4 up;
-	glm::vec4 right;
-	glm::vec4 worldUp;
-	glm::mat4 rotation;
+	glm::vec3 position;
+	glm::vec3 front;
+	glm::vec3 up;
+	glm::vec3 right;
 
+	glm::quat cameraQuat;
+	glm::vec3 eyeVector;
+	GLfloat keyPitch, keyYaw, keyRoll;
+
+	glm::mat4 viewMatrix;
 
 	GLfloat movementSpeed;
 	GLfloat mouseSensitivity;
 	GLfloat zoom;
 	GLint smoothZoom = 0;
 
-	void updateCameraVectors() {
-		
-		
-		this->front = rotation * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
-		this->right = glm::vec4(glm::normalize(glm::cross(glm::vec3(this->front), glm::vec3(this->worldUp))), 0.0f);
-		this->up = glm::vec4(glm::normalize(glm::cross(glm::vec3(this->right), glm::vec3(this->front))), 0.0f);
-	}
+	void updateView() {
 
+
+		// Temporary frame quaternion from pitch, yaw, roll
+		glm::quat key_quat = glm::quat(glm::vec3(keyPitch, keyYaw, keyRoll));
+		// Reset frame keys;
+		keyPitch = 0;
+		keyYaw = 0;
+		keyRoll = 0;
+
+		cameraQuat = key_quat * cameraQuat;
+		cameraQuat = glm::normalize(cameraQuat);
+
+		glm::mat4 rotation = glm::mat4_cast(cameraQuat);
+
+		glm::mat4 translation = glm::mat4(1.0f);
+		translation = glm::translate(translation, position);
+
+		viewMatrix = rotation * translation;
+
+		glm::mat4 mat = viewMatrix;
+		front = glm::vec3(mat[0][2], mat[1][2], mat[2][2]);
+		right = glm::vec3(mat[0][0], mat[1][0], mat[2][0]);
+		up = glm::normalize(glm::cross(front, right));
+		
+	}
 };
