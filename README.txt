@@ -30,4 +30,8 @@ Ctrl:		Strafe down
 Shift:		[Hold] Sprint
 Alt:		[Hold] Walk
 
+F: 		Fill display mode
+L:		Lines display mode
+P:		Points display mode
+
 
